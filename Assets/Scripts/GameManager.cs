@@ -93,19 +93,30 @@ public class GameManager : MonoBehaviour
 
     public void GameOver(string reason)
     {
+        Debug.Log($"GameOver called! Reason: {reason}");
+        
         Time.timeScale = 0f;
 
+        // Clear any existing notifications first
+        if (UIManager.instance != null)
+        {
+            UIManager.instance.ClearNotificationNow();
+        }
+
+        // Show Game Over message
         if (UIManager.instance != null && UIManager.instance.actionNotificationText != null)
         {
             UIManager.instance.actionNotificationText.text =
                 "GAME OVER!\n" + reason + "\n\nPress R to Restart";
             UIManager.instance.actionNotificationText.gameObject.SetActive(true);
+            Debug.Log("Game Over message set on actionNotificationText");
         }
         else if (notificationText != null)
         {
             notificationText.text =
                 "GAME OVER!\n" + reason + "\n\nPress R to Restart";
             notificationText.gameObject.SetActive(true);
+            Debug.Log("Game Over message set on notificationText");
         }
         else
         {

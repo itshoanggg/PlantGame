@@ -125,20 +125,19 @@ public class WeatherSystem : MonoBehaviour
             
             if (UIManager.instance != null)
             {
-                UIManager.instance.ShowNotification("Troi mua! Cay duoc tuoi tu dong.", 3f);
+                UIManager.instance.ShowNotification("Rainning.", 3f);
             }
         }
     }
 
 
-    // Lấy tên thời tiết bằng tiếng Việt
     public string GetWeatherNameVN()
     {
         switch (currentWeather)
         {
-            case WeatherType.Sunny: return "NANG GAT";
-            case WeatherType.Rainy: return "TROI MUA";
-            case WeatherType.Cloudy: return "TROI MAY";
+            case WeatherType.Sunny: return "Sunny";
+            case WeatherType.Rainy: return "Rain";
+            case WeatherType.Cloudy: return "Cloud";
             default: return "Unknown";
         }
     }

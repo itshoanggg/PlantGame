@@ -104,6 +104,6 @@ public class UIManager : MonoBehaviour
     public void UpdateWeatherDisplay(string weatherName)
     {
         if (weatherText != null)
-            weatherText.text = "Thời tiết: " + weatherName;
+            weatherText.text = "Weather: " + weatherName;
     }
 }

@@ -123,6 +123,8 @@ public class PlantController : MonoBehaviour
     
     void CheckNewDeathConditions()
     {
+        if (isDead) return; // Đã chết rồi thì không check nữa
+        
         // DEATH CONDITION 1: Too much rain (4+ consecutive days)
         if (consecutiveRainyDays >= 4)
         {
@@ -273,18 +275,53 @@ public class PlantController : MonoBehaviour
 
     void Die(string reason)
     {
+        if (isDead) return; // Tránh gọi nhiều lần
+        
         isDead = true;
+        
+        Debug.Log($"Die() called! Reason: {reason}");
 
         if (stage == 0) spriteRenderer.sprite = seedDeathSprite;
         if (stage == 1) spriteRenderer.sprite = sproutDeathSprite;
         if (stage == 2) spriteRenderer.sprite = treeDeathSprite;
         if (stage == 3) spriteRenderer.sprite = flowerDeathSprite;
 
-        GameManager.instance.GameOver(reason);
+        // Check GameManager tồn tại trước khi gọi
+        if (GameManager.instance != null)
+        {
+            Debug.Log("Calling GameManager.GameOver()");
+            GameManager.instance.GameOver(reason);
+        }
+        else
+        {
+            Debug.LogError("GameManager.instance is null! Cannot call GameOver.");
+        }
     }
 
     void CheckAndRequestActions()
     {
+        // Nếu cây đã chết → KHÔNG request water/fertilizer nữa
+        if (isDead)
+        {
+            waterRequested = false;
+            daysWaterRequested = 0;
+            fertilizerRequested = false;
+            daysFertilizerRequested = 0;
+            UpdateUIButtons();
+            return;
+        }
+        
+        // Nếu cây đang già đi tự nhiên → KHÔNG request water/fertilizer nữa
+        if (isNaturallyAging)
+        {
+            waterRequested = false;
+            daysWaterRequested = 0;
+            fertilizerRequested = false;
+            daysFertilizerRequested = 0;
+            UpdateUIButtons();
+            return;
+        }
+        
         // WEATHER SYSTEM: Check if it's raining (auto-water, no request needed)
         bool isRaining = WeatherSystem.instance != null && WeatherSystem.instance.currentWeather == WeatherType.Rainy;
         
@@ -317,11 +354,15 @@ public class PlantController : MonoBehaviour
         }
         
         // Check if requests timeout (1-2 days buffer)
+        // BỎ CHECK NÀY - gây conflict với CheckNewDeathConditions()
+        // Death từ không tưới đã được check ở CheckNewDeathConditions()
+        /*
         if (waterRequested && daysWaterRequested >= 2)
         {
             Die("Plant died from lack of water!");
             return;
         }
+        */
         
         if (fertilizerRequested && daysFertilizerRequested >= 2)
         {
@@ -369,6 +410,8 @@ public class PlantController : MonoBehaviour
     
     void RequestWater()
     {
+        if (isDead) return; // Đã chết thì không request
+        
         waterRequested = true;
         daysWaterRequested = 0;
         
