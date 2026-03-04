@@ -1,0 +1,561 @@
+========================================
+PLANT GAME - TÀI LIỆU GAME ĐẦY ĐỦ
+========================================
+
+📋 MỤC LỤC:
+1. Tổng quan game
+2. Gameplay & Logic
+3. Cấu trúc project
+4. Hướng dẫn setup từ đầu
+5. Scripts chi tiết
+6. Troubleshooting
+
+========================================
+1. TỔNG QUAN GAME
+========================================
+
+🎮 KHÁI NIỆM:
+Game mô phỏng trồng cây với hệ thống thời tiết và chu kỳ ngày/đêm.
+Người chơi điều khiển thời tiết và chăm sóc cây để cây phát triển.
+
+🎯 MỤC TIÊU:
+- Giữ cây sống sót qua các giai đoạn
+- Tưới nước đúng lúc theo thời tiết
+- Bón phân để cây phát triển nhanh hơn
+- Tránh để cây chết vì khô hạn hoặc ngập nước
+
+🏆 ĐIỀU KIỆN THẮNG:
+- Cây phát triển qua tất cả các giai đoạn
+- Cây không chết
+
+💀 ĐIỀU KIỆN THUA:
+- Cây chết vì không tưới nước đủ
+- Cây chết vì mưa quá nhiều (ngập)
+
+========================================
+2. GAMEPLAY & LOGIC
+========================================
+
+🌱 GIAI ĐOẠN PHÁT TRIỂN CỦA CÂY:
+--------------------------------
+0. Seed (Hạt giống)
+1. Sprout (Mầm)
+2. Tree (Cây)
+3. Flower (Hoa)
+
+Mỗi giai đoạn cần:
+- Tưới nước đúng thời điểm
+- Bón phân (tùy giai đoạn)
+- Thời gian phát triển
+
+🌦️ HỆ THỐNG THỜI TIẾT:
+------------------------
+Người chơi điều khiển 3 loại thời tiết:
+
+☀️ NẮNG GẮT (Sunny):
+- Tưới nước: MỖI NGÀY (frequency = 1 ngày)
+- Không tưới → Chết sau 2 NGÀY
+- Visual: Text "NANG GAT" (không có effect)
+
+🌧️ TRỜI MƯA (Rainy):
+- Tưới nước: 3 NGÀY/LẦN (frequency = 3 ngày)
+- TỰ ĐỘNG tưới khi bắt đầu ngày
+- Mưa liên tục 4 NGÀY → Cây chết ngập
+- Visual: Rain particle effect + text "TROI MUA"
+
+☁️ TRỜI MÂY (Cloudy):
+- Tưới nước: 2 NGÀY/LẦN (frequency = 2 ngày)
+- Không tưới → Chết sau 5 NGÀY
+- Visual: Text "TROI MAY" (không có effect)
+
+⏰ CHU KỲ NGÀY/ĐÊM:
+--------------------
+- Mỗi cycle = 1 ngày hoàn chỉnh
+- Ban ngày: 10 giây (có thể điều chỉnh)
+- Ban đêm: 10 giây (có thể điều chỉnh)
+- Background tự động fade giữa ngày/đêm
+- Thời tiết do người chơi điều khiển (không tự đổi)
+
+💧 HỆ THỐNG TƯỚI NƯỚC:
+-----------------------
+Logic:
+1. Mỗi ngày mới, game tính: daysSinceLastWater++
+2. Kiểm tra weather frequency:
+   - Nắng: nếu daysSinceLastWater >= 1 → Request water
+   - Mây: nếu daysSinceLastWater >= 2 → Request water
+   - Mưa: nếu daysSinceLastWater >= 3 → Request (nhưng auto-water)
+3. Button tưới nước sáng lên (màu vàng) khi request
+4. Người chơi nhấn button → wateredToday = true, reset counters
+5. Nếu không tưới đủ lâu → Cây chết
+
+Death conditions:
+- Nắng + không tưới 2 ngày → Chết khô
+- Mây + không tưới 5 ngày → Chết khô
+- Mưa 4 ngày liên tục → Chết ngập
+- Tưới quá nhiều 1 ngày (>2 lần) → Chết ngập
+
+🌿 HỆ THỐNG BÓN PHÂN:
+----------------------
+Logic:
+1. Chỉ request ở giai đoạn Sprout và Tree
+2. Request mỗi 5 ngày
+3. Bón phân → Tăng 2 ngày grow (phát triển nhanh hơn)
+4. Không bắt buộc (optional)
+5. Nếu không bón sau 2 ngày request → Cancel request
+
+📊 TRACKING VARIABLES:
+----------------------
+Plant tracking:
+- stage: Giai đoạn hiện tại (0-3)
+- growDays: Số ngày đã phát triển
+- daysSinceLastWater: Ngày kể từ lần tưới cuối
+- daysWithoutWater: Ngày liên tục không tưới
+- consecutiveRainyDays: Ngày mưa liên tục
+- wateredToday: Đã tưới hôm nay chưa
+- isDead: Cây chết chưa
+
+Weather tracking:
+- currentWeather: Thời tiết hiện tại (Sunny/Rainy/Cloudy)
+
+UI tracking:
+- waterRequested: Có đang request tưới nước không
+- fertilizerRequested: Có đang request bón phân không
+
+========================================
+3. CẤU TRÚC PROJECT
+========================================
+
+📁 FOLDER STRUCTURE:
+--------------------
+Assets/
+├── Scenes/
+│   ├── MenuScene.unity          (Menu chính)
+│   └── SampleScene.unity        (Game scene)
+│
+├── Scripts/
+│   ├── AudioManager.cs          (Quản lý âm thanh)
+│   ├── AutoDestroy.cs           (Tự động xóa effects)
+│   ├── DayNightFade.cs          (Fade ngày/đêm)
+│   ├── GameManager.cs           (Quản lý game loop)
+│   ├── MenuManager.cs           (Quản lý menu)
+│   ├── PlantController.cs       (Logic cây)
+│   ├── UIManager.cs             (Quản lý UI)
+│   ├── WeatherController.cs    (3 buttons thời tiết)
+│   └── WeatherSystem.cs         (Hệ thống thời tiết)
+│
+├── Art/
+│   ├── Background images (sky.jpg, night.jpg)
+│   ├── Plant sprites (seed, sprout, tree, flower)
+│   ├── Death sprites
+│   └── UI icons (water_can.png, fertilizer.png)
+│
+├── Audio/
+│   ├── Music/
+│   │   ├── MenuMusic.mp3        (Nhạc menu)
+│   │   └── GameMusic.mp3        (Nhạc game)
+│   └── SFX/
+│       └── ButtonClick.wav      (Click sound)
+│
+├── Prefabs/
+│   ├── WaterEffect              (Particle effect tưới nước)
+│   └── FertilizerEffect         (Particle effect bón phân)
+│
+└── Resources/
+    ├── WaterEffect              (Loadable at runtime)
+    └── FertilizerEffect         (Loadable at runtime)
+
+🎨 UI HIERARCHY (SampleScene):
+-------------------------------
+Canvas
+├── DayText                      (Hiển thị "Day X")
+├── WeatherText                  (Hiển thị thời tiết)
+├── ActionNotificationText       (Thông báo hành động)
+├── WaterButton                  (Button tưới nước)
+├── FertilizerButton             (Button bón phân)
+├── SunnyButton                  (Button chọn nắng)
+├── RainyButton                  (Button chọn mưa)
+└── CloudyButton                 (Button chọn mây)
+
+Background
+├── Background_Day               (Sky ban ngày)
+└── Background_Night             (Sky ban đêm)
+
+Game Objects
+├── Plant                        (Sprite cây + PlantController)
+├── WeatherSystem                (Quản lý thời tiết)
+│   └── RainEffect               (Particle rain)
+├── GameManager                  (Quản lý game)
+├── UIManager                    (Quản lý UI)
+├── WeatherController            (3 buttons thời tiết)
+└── AudioManager                 (DontDestroyOnLoad)
+
+========================================
+4. HƯỚNG DẪN SETUP TỪ ĐẦU
+========================================
+
+📝 BƯỚC 1: TẠO PROJECT MỚI
+---------------------------
+1. Unity Hub > New Project
+2. Template: 2D (Core)
+3. Tên project: "PlantGame" (hoặc tên bạn muốn)
+4. Create
+
+📝 BƯỚC 2: IMPORT ASSETS
+-------------------------
+1. Tạo folders:
+   - Assets/Scenes
+   - Assets/Scripts
+   - Assets/Art
+   - Assets/Audio/Music
+   - Assets/Audio/SFX
+   - Assets/Prefabs
+   - Assets/Resources
+
+2. Import sprites:
+   - Background images (sky, night)
+   - Plant sprites (seed, sprout, tree, flower, death states)
+   - UI icons (water, fertilizer)
+
+3. Import audio:
+   - Menu music
+   - Game music
+   - Button click sound
+
+📝 BƯỚC 3: TẠO MENU SCENE
+--------------------------
+1. File > New Scene > Save as "MenuScene"
+2. Setup:
+   - Canvas > Background Image (UI)
+   - Button "PLAY"
+   - Title text (optional)
+3. Create Empty GameObject "MenuManager"
+   - Add MenuManager script
+   - Assign PlayButton
+4. Create Empty GameObject "AudioManager"
+   - Add AudioManager script
+   - Assign audio clips
+5. Save scene
+
+📝 BƯỚC 4: TẠO GAME SCENE
+--------------------------
+1. File > New Scene > Save as "SampleScene"
+
+2. Setup Background:
+   - Create 2 Sprites: Background_Day, Background_Night
+   - Assign sky.jpg và night.jpg
+   - Position: (0, 0, 10)
+   - Scale để phủ màn hình
+
+3. Setup Canvas & UI:
+   - Canvas (Screen Space - Overlay)
+   - Add UI elements:
+     * DayText (TextMeshPro) - góc trên trái
+     * WeatherText (TextMeshPro) - góc trên phải
+     * ActionNotificationText (TextMeshPro) - giữa màn hình
+     * WaterButton (Button) - dưới bên trái
+     * FertilizerButton (Button) - dưới bên trái
+     * SunnyButton (Button) - bên phải
+     * RainyButton (Button) - bên phải
+     * CloudyButton (Button) - bên phải
+
+4. Setup Plant:
+   - 2D Object > Sprite
+   - Name: "Plant"
+   - Add PlantController script
+   - Assign all sprites (seed, sprout, tree, flower, death states)
+
+5. Setup Weather:
+   - Create Empty "WeatherSystem"
+   - Add WeatherSystem script
+   - Create Particle System "RainEffect" (con của WeatherSystem)
+     * Setup rain particle (xem WEATHER_SETUP_GUIDE.txt)
+     * Disable GameObject
+   - Assign RainEffect vào WeatherSystem
+
+6. Setup Managers:
+   - Create Empty "GameManager"
+     * Add GameManager script
+     * Add DayNightFade script
+     * Assign references
+   - Create Empty "UIManager"
+     * Add UIManager script
+     * Assign all UI references
+   - Create Empty "WeatherController"
+     * Add WeatherController script
+     * Assign 3 weather buttons
+
+7. Save scene
+
+📝 BƯỚC 5: BUILD SETTINGS
+--------------------------
+1. File > Build Settings
+2. Add MenuScene (index 0 - đầu tiên)
+3. Add SampleScene (index 1)
+4. Close
+
+📝 BƯỚC 6: TEST
+---------------
+1. Open MenuScene
+2. Play
+3. Click PLAY button → Chuyển sang game
+4. Test gameplay:
+   - Chọn thời tiết (Nắng/Mưa/Mây)
+   - Tưới nước khi button sáng
+   - Bón phân khi cần
+   - Quan sát cây phát triển
+
+========================================
+5. SCRIPTS CHI TIẾT
+========================================
+
+📜 AUDIOMANAGER.CS
+------------------
+Mục đích: Quản lý tất cả âm thanh trong game
+
+Key features:
+- Singleton pattern (chỉ 1 instance)
+- DontDestroyOnLoad (tồn tại suốt game)
+- 2 AudioSources: 1 cho music (loop), 1 cho SFX (one-shot)
+- Play menu music khi vào menu
+- Switch sang game music khi vào game
+- Play button click sound
+
+Public methods:
+- PlayMenuMusic()
+- PlayGameMusic()
+- PlayButtonClick()
+- SetMusicVolume(float)
+- SetSFXVolume(float)
+- MuteAll(bool)
+
+📜 AUTODESTROY.CS
+-----------------
+Mục đích: Tự động xóa GameObject sau X giây
+
+Usage: Attach vào WaterEffect/FertilizerEffect prefabs
+- lifeTime = 1f (xóa sau 1 giây)
+
+📜 DAYNIGHTFADE.CS
+------------------
+Mục đích: Fade background giữa ngày và đêm
+
+Key features:
+- Lerp alpha của 2 sprites (day/night)
+- FadeToDay(): Fade sang ban ngày
+- FadeToNight(): Fade sang ban đêm
+- fadeDuration: Thời gian fade (1.5s)
+
+Public methods:
+- FadeToDay()
+- FadeToNight()
+
+📜 GAMEMANAGER.CS
+-----------------
+Mục đích: Quản lý game loop, chu kỳ ngày/đêm, timer
+
+Key variables:
+- dayDuration = 10f (10 giây ban ngày)
+- nightDuration = 10f (10 giây ban đêm)
+- day: Số ngày hiện tại
+- isDay: Đang ban ngày hay đêm
+- timer: Đếm thời gian
+
+Logic flow:
+1. Start() → Bắt đầu ban ngày, play music
+2. Update() → Đếm timer
+3. Khi timer >= duration:
+   - Nếu đang ngày → StartNight()
+   - Nếu đang đêm → StartNewDay()
+4. StartNewDay():
+   - day++
+   - Update weather visuals
+   - Call plant.DayPassed()
+   - Fade to day
+5. StartNight():
+   - Update weather visuals
+   - Fade to night
+
+Public methods:
+- GameOver(string reason)
+
+📜 MENUMANAGER.CS
+-----------------
+Mục đích: Quản lý menu scene, button Play
+
+Key features:
+- Start(): Play menu music, setup button
+- OnPlayButtonClicked(): Play click sound, load game scene
+- LoadGameScene(): SceneManager.LoadScene("SampleScene")
+
+Public methods:
+- QuitGame() (optional)
+
+📜 PLANTCONTROLLER.CS
+---------------------
+Mục đích: Quản lý logic cây (tưới, phân, phát triển, chết)
+
+Key variables:
+- stage: 0=seed, 1=sprout, 2=tree, 3=flower
+- growDays: Ngày phát triển
+- daysSinceLastWater: Ngày kể từ lần tưới cuối
+- daysWithoutWater: Ngày liên tục không tưới
+- consecutiveRainyDays: Ngày mưa liên tục
+- wateredToday: Đã tưới hôm nay
+- isDead: Cây chết
+
+Logic flow:
+1. DayPassed() - Được gọi mỗi ngày mới:
+   - growDays++
+   - TrackWeatherChanges()
+   - Update counters
+   - CheckNewDeathConditions()
+   - CheckAndRequestActions()
+   - UpdateVisual()
+   - Reset daily flags
+
+2. TrackWeatherChanges():
+   - Đếm consecutiveRainyDays
+   - Reset khi không mưa
+
+3. CheckNewDeathConditions():
+   - Mưa 4 ngày → Chết ngập
+   - Nắng + không tưới 2 ngày → Chết khô
+   - Mây + không tưới 5 ngày → Chết khô
+
+4. CheckAndRequestActions():
+   - Nếu mưa → Không request (auto-water)
+   - Nếu không mưa:
+     * Get water frequency
+     * Nếu daysSinceLastWater >= frequency → Request
+   - Request fertilizer (nếu cần)
+   - Check timeout
+
+5. Water():
+   - Kiểm tra waterRequested
+   - wateredToday = true
+   - Reset counters
+   - Spawn water effect
+   - Update UI
+
+6. Fertilize():
+   - Tăng growDays += 2
+   - Reset fertilizer counters
+   - Spawn fertilizer effect
+
+7. GetWaterFrequency():
+   - Sunny → 1 ngày
+   - Cloudy → 2 ngày
+   - Rainy → 3 ngày
+
+8. AutoWaterFromRain():
+   - Được gọi bởi WeatherSystem khi mưa
+   - wateredToday = true
+   - Reset counters
+   - Không spawn water effect
+
+Public methods:
+- Water()
+- Fertilize()
+- DayPassed()
+- AutoWaterFromRain()
+
+📜 UIMANAGER.CS
+---------------
+Mục đích: Quản lý UI (buttons, notifications)
+
+Key features:
+- Singleton pattern
+- Update button colors (normal/required/disabled)
+- Show/hide notifications
+
+Key variables:
+- waterButton, fertilizerButton
+- actionNotificationText
+- weatherText
+- normalColor, requiredColor, disabledColor
+
+Public methods:
+- SetWaterButtonState(bool enabled, bool required)
+- SetFertilizerButtonState(bool enabled, bool required)
+- ShowNotification(string message, float duration)
+- ClearNotificationNow()
+- UpdateWeatherDisplay(string weatherName)
+
+📜 WEATHERCONTROLLER.CS
+-----------------------
+Mục đích: Quản lý 3 buttons điều khiển thời tiết
+
+Key features:
+- Singleton pattern
+- 3 buttons: Sunny, Rainy, Cloudy
+- Button visuals (normal/selected)
+- Play click sound khi chọn
+
+Logic:
+1. Start(): Setup button listeners
+2. SelectWeather(WeatherType):
+   - Play click sound
+   - Update WeatherSystem
+   - Update button visuals (highlight selected)
+
+Public methods:
+- SelectWeather(WeatherType)
+- GetCurrentWeather()
+
+📜 WEATHERSYSTEM.CS
+-------------------
+Mục đích: Hệ thống thời tiết, rain effect
+
+Key variables:
+- currentWeather: Sunny/Rainy/Cloudy
+- rainEffect: Particle effect mưa
+- sunEffect: (không dùng nữa)
+- weatherIcon: Sprite icon thời tiết
+
+Key features:
+- Singleton pattern
+- Update visuals theo weather
+- Auto water plants khi mưa
+- Keyboard shortcuts (1/2/3)
+
+Logic:
+1. Start(): Update visuals
+2. Update(): Keyboard shortcuts
+3. UpdateWeatherVisuals():
+   - Tắt tất cả effects
+   - Bật effect tương ứng với weather
+   - Update UI text
+4. AutoWaterPlants():
+   - Call plant.AutoWaterFromRain()
+   - Show notification
+5. SetWeather(WeatherType):
+   - Change currentWeather
+   - Update visuals
+
+Public methods:
+- SetWeather(WeatherType)
+- UpdateWeatherVisuals()
+- GetWeatherNameVN()
+
+========================================
+KẾT LUẬN
+========================================
+
+Game này là một project mô phỏng đơn giản nhưng đầy đủ:
+- Gameplay loop rõ ràng
+- Hệ thống quản lý tốt (Managers, Controllers)
+- UI/UX dễ hiểu
+- Code clean, có comments
+- Dễ mở rộng thêm features
+
+Có thể mở rộng:
+- Thêm nhiều loại cây
+- Thêm nhiều loại thời tiết
+- Thêm seasons (mùa)
+- Thêm pests (sâu bệnh)
+- Thêm shop (mua hạt giống, phân)
+- Thêm multiple plants
+- Thêm achievements
+
+
+
