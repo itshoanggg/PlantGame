@@ -300,7 +300,7 @@ public class PlantController : MonoBehaviour
             int waterFrequency = GetWaterFrequency();
             
             // NEW LOGIC: Request water based on frequency
-            // Nắng (freq=1): request nếu daysSinceLastWater >= 1 (tức là mỗi ngày mới)
+            // Nắng (freq=0): request ngay khi chưa tưới (MỖI NGÀY)
             // Mây (freq=2): request nếu daysSinceLastWater >= 2 (2 ngày 1 lần)
             // Mưa (freq=3): request nếu daysSinceLastWater >= 3 (3 ngày 1 lần, nhưng auto-watered)
             
@@ -342,7 +342,7 @@ public class PlantController : MonoBehaviour
             switch (weather)
             {
                 case WeatherType.Sunny:
-                    return 1; // Nắng: tưới mỗi ngày
+                    return 0; // Nắng: tưới MỖI NGÀY (0 = request ngay)
                 
                 case WeatherType.Cloudy:
                     return 2; // Mây: 2 ngày tưới 1 lần
@@ -455,7 +455,9 @@ public class PlantController : MonoBehaviour
         GameObject waterEffect = Resources.Load<GameObject>("WaterEffect");
         if (waterEffect != null)
         {
-            Instantiate(waterEffect, transform.position, Quaternion.identity);
+            // Spawn cao hơn cây một chút (offset Y)
+            Vector3 spawnPosition = transform.position + new Vector3(-1f, 3f, 0);
+            Instantiate(waterEffect, spawnPosition, Quaternion.identity);
         }
         
         UpdateUIButtons();
@@ -513,7 +515,9 @@ public class PlantController : MonoBehaviour
         GameObject fertilizerEffect = Resources.Load<GameObject>("FertilizerEffect");
         if (fertilizerEffect != null)
         {
-            Instantiate(fertilizerEffect, transform.position, Quaternion.identity);
+            // Spawn cao hơn cây một chút (offset Y)
+            Vector3 spawnPosition = transform.position + new Vector3(-1f, 3f, 0);
+            Instantiate(fertilizerEffect, spawnPosition, Quaternion.identity);
         }
         
         UpdateUIButtons();
