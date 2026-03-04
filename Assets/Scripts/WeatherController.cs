@@ -60,6 +60,12 @@ public class WeatherController : MonoBehaviour
             WeatherSystem.instance.SetWeather(weather);
         }
 
+        // SUNNY: Yêu cầu tưới nước ngay lập tức
+        if (weather == WeatherType.Sunny && GameManager.instance != null && GameManager.instance.plant != null)
+        {
+            GameManager.instance.plant.RequestWaterImmediately();
+        }
+
         // Update button visuals
         UpdateButtonVisuals();
 

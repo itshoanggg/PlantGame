@@ -124,6 +124,7 @@ public class PlantController : MonoBehaviour
     void CheckNewDeathConditions()
     {
         if (isDead) return; // Đã chết rồi thì không check nữa
+        if (isNaturallyAging) return; // Đang già tự nhiên thì không check drought/flood
         
         // DEATH CONDITION 1: Too much rain (4+ consecutive days)
         if (consecutiveRainyDays >= 4)
@@ -404,7 +405,15 @@ public class PlantController : MonoBehaviour
         // Only request fertilizer in Sprout (stage 1) or Tree (stage 2)
         // And only if it's been at least 5 days since last fertilizer
         if ((stage == 1 || stage == 2) && daysSinceLastFertilizer >= 5 && totalFertilizerCount < 2)
+        {
+            // RAINY: Không yêu cầu bón phân (mưa nhiều thì không cần phân)
+            if (WeatherSystem.instance != null && WeatherSystem.instance.currentWeather == WeatherType.Rainy)
+            {
+                return false;
+            }
+            
             return true;
+        }
         return false;
     }
     
@@ -419,6 +428,23 @@ public class PlantController : MonoBehaviour
         {
             UIManager.instance.ShowNotification("Plant needs water!", 3f); // Auto hide after 3s
         }
+    }
+
+    // Yêu cầu tưới nước NGAY (khi chuyển sang Sunny)
+    public void RequestWaterImmediately()
+    {
+        if (isDead) return;
+        if (isNaturallyAging) return;
+        
+        waterRequested = true;
+        daysWaterRequested = 0;
+        
+        if (UIManager.instance != null)
+        {
+            UIManager.instance.ShowNotification("Sunny weather! Plant needs water NOW!", 3f);
+        }
+        
+        UpdateUIButtons();
     }
     
     void RequestFertilizer()
